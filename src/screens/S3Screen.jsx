@@ -122,6 +122,7 @@ export default function S3Screen() {
   );
 }
 
+
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: '#fff' },
   card: {
