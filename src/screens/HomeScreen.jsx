@@ -18,12 +18,16 @@ export default function AllImagesScreen() {
   const [selectedId, setSelectedId] = useState(null);
   const [scaleAnim] = useState(new Animated.Value(1));
 
-  // Fetch images from Picsum
   useEffect(() => {
     const fetchImages = async () => {
       try {
-        const res = await axios.get('https://picsum.photos/v2/list?page=3&limit=100');
-        setImages(res.data);
+        const pageRequests = [1, 2, 3].map(page =>
+          axios.get(`https://picsum.photos/v2/list?page=${page}&limit=100`)
+        );
+
+        const responses = await Promise.all(pageRequests);
+        const combinedImages = responses.flatMap(res => res.data);
+        setImages(combinedImages);
       } catch (err) {
         console.error('Error fetching images:', err);
         Alert.alert('Error fetching images');
@@ -32,7 +36,7 @@ export default function AllImagesScreen() {
     fetchImages();
   }, []);
 
-  // Upload image using Lambda-generated presigned URL
+  // Upload image to S3 using Lambda-generated presigned URL
   const uploadImage = async (item) => {
     setUploading(true);
     try {
@@ -42,7 +46,6 @@ export default function AllImagesScreen() {
       // Step 1: Get presigned URL
       const presignRes = await axios.get(presignedUrlApi);
       const uploadUrl = presignRes.data.uploadUrl;
-
       console.log('Presigned URL:', uploadUrl);
 
       // Step 2: Fetch image as blob
@@ -79,7 +82,13 @@ export default function AllImagesScreen() {
       onPress={() => handleSelect(item.id)}
       activeOpacity={0.8}
     >
-      <Animated.View style={[styles.card, selectedId === item.id && styles.selectedCard, { transform: [{ scale: scaleAnim }] }]}>
+      <Animated.View
+        style={[
+          styles.card,
+          selectedId === item.id && styles.selectedCard,
+          { transform: [{ scale: scaleAnim }] },
+        ]}
+      >
         <Image source={{ uri: item.download_url }} style={styles.image} />
         <Text style={styles.author}>{item.author}</Text>
         {selectedId === item.id && (
